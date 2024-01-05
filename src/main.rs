@@ -118,7 +118,6 @@ fn main() {
         }
     }
 
-    // If no arguments are provided, run in interactive mode
     if matches.args.is_empty() {
         eprintln!(
             "No arguments provided.\n\nUsage:\n\tbayes_spam_ml --predict <MESSAGE> --train <FILE>"
