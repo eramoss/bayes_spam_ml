@@ -1,5 +1,5 @@
+use clap::*;
 use std::collections::HashMap;
-
 #[derive(Debug, Clone)]
 struct SpamFilter {
     spam_word_counts: HashMap<String, usize>,
@@ -55,7 +55,7 @@ impl SpamFilter {
     ) -> f64 {
         let prior_probability =
             message_count as f64 / (self.spam_message_count + self.ham_message_count) as f64;
-        let mut probability = prior_probability.ln();
+        let mut probability = prior_probability.ln(); // prevent underflow
 
         for word in words {
             if let Some(word_count) = word_counts.get(*word) {
@@ -66,19 +66,60 @@ impl SpamFilter {
         probability
     }
 }
-
 fn main() {
+    let matches = App::new("Bayesian Spam Filter CLI")
+        .version("1.0")
+        .author("eramoss")
+        .about("Train and predict with a Bayesian spam filter.")
+        .arg(
+            Arg::with_name("train")
+                .short("t")
+                .long("train")
+                .value_name("FILE")
+                .help("Trains the spam filter with the content of the specified file")
+                .takes_value(true),
+        )
+        .arg(
+            Arg::with_name("predict")
+                .short("p")
+                .long("predict")
+                .value_name("MESSAGE")
+                .help("Predicts whether the given message is spam")
+                .takes_value(true),
+        )
+        .get_matches();
+
     let mut spam_filter = SpamFilter::new();
 
-    spam_filter.train("Buy cheap watches", true);
-    spam_filter.train("Hello, how are you?", false);
+    if let Some(train_file) = matches.value_of("train") {
+        match std::fs::read_to_string(train_file) {
+            Ok(content) => {
+                for line in content.lines() {
+                    // Assume each line is a message, and the last character indicates the label (0 for ham, 1 for spam)
+                    let is_spam = line.ends_with("1");
+                    let message = line.trim_end_matches("01").trim();
 
-    let message = "Great deals on luxury watches!";
-    let is_spam = spam_filter.predict(message);
+                    spam_filter.train(message, is_spam);
+                }
+                println!("Training completed.");
+            }
+            Err(err) => eprintln!("Error reading training file: {}", err),
+        }
+    }
 
-    if is_spam {
-        println!("The message is likely spam.");
-    } else {
-        println!("The message is likely not spam.");
+    if let Some(message) = matches.value_of("predict") {
+        let is_spam = spam_filter.predict(message);
+        if is_spam {
+            println!("The message is likely spam.");
+        } else {
+            println!("The message is likely not spam.");
+        }
+    }
+
+    // If no arguments are provided, run in interactive mode
+    if matches.args.is_empty() {
+        eprintln!(
+            "No arguments provided.\n\nUsage:\n\tbayes_spam_ml --predict <MESSAGE> --train <FILE>"
+        );
     }
 }
