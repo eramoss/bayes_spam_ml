@@ -39,8 +39,10 @@ impl SpamFilter {
 
     fn predict(&self, message: &str) -> bool {
         let words: Vec<&str> = message.split_whitespace().collect();
+        println!("SPAM PROBABILITY:\n");
         let spam_probability =
             self.calculate_probability(&words, &self.spam_word_counts, self.spam_message_count);
+        println!("\n\n\n\n\nHAM PROBABILITY:\n");
         let ham_probability =
             self.calculate_probability(&words, &self.ham_word_counts, self.ham_message_count);
 
@@ -53,11 +55,11 @@ impl SpamFilter {
         word_counts: &HashMap<String, usize>,
         message_count: usize,
     ) -> f64 {
-        let prior_probability =
+        let mut probability =
             message_count as f64 / (self.spam_message_count + self.ham_message_count) as f64;
-        let mut probability = prior_probability.ln(); // prevent underflow
 
         for word in words {
+            dbg!(word, probability);
             if let Some(word_count) = word_counts.get(*word) {
                 probability += (word_count + 1) as f64 / (message_count + 2) as f64;
             }
